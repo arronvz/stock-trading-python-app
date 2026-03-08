@@ -5,11 +5,22 @@ from script import run_stock_job
 from datetime import datetime
 
 def basic_job():
-    print("Job started at:" , datetime.now())
+    print("Basic Job started at:" , datetime.now())
 
-schedule.every().minute.do(basic_job)
+def scheduled_stock_job():
+    print("Stock job triggered at:", datetime.now())
+    try:
+        run_stock_job()
+        print("Stock job completed successfully")
+    except Exception as e:
+        print("Stock job failed:", e)
 
-schedule.every().day.at("09:00").do(run_stock_job)
+schedule.every(1).minute.do(basic_job)
+schedule.every(1).minute.do(run_stock_job)
+
+# schedule.every().day.at("08:03").do(scheduled_stock_job)
+
+print("Scheduler started...")
 
 while True:
     schedule.run_pending()

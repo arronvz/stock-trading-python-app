@@ -1,9 +1,5 @@
 requests
-openai
-dotenv
-
-twelvedata
+python-dotenv
 schedule
 snowflake-connector-python
 
-csv
