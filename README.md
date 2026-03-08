@@ -1,126 +1,104 @@
-Stock Trading Data Pipeline (Python + Snowflake)
+# Stock Trading Python Data Pipeline
 
-A Python-based data pipeline that extracts stock ticker reference data from the Massive.com API (formerly Polygon.io), processes it incrementally, and loads it into Snowflake for analytics.
+A Python application that uses the [Massive.com](https://massive.com/) API (formerly Polygon.io) to extract stock ticker reference data and load it into a Snowflake data warehouse.
 
-The pipeline supports automated scheduling and incremental ingestion so that each run continues from the last processed record.
+### Overview
 
-Overview
+This project demonstrates a simple **data engineering pipeline** that retrieves stock ticker reference data from the Massive API, processes it incrementally, and loads it into Snowflake.
 
-This project demonstrates a simple data engineering pipeline built with Python and Snowflake.
+The pipeline supports scheduled execution and incremental ingestion so that each run continues from the last processed record.
 
-The pipeline:
+### Architecture
 
-Retrieves stock ticker reference data from the Massive API
-
-Handles API pagination
-
-Performs incremental ingestion using Snowflake as the checkpoint source
-
-Loads the data into a Snowflake table
-
-Can be executed manually or via a scheduler
-
-The goal of the project is to simulate a production-style ingestion pipeline that is automated, observable, and idempotent.
-
-Architecture
+```
 Massive.com API
         │
         ▼
-Python Ingestion Script
-(script.py)
+Python Ingestion Script (script.py)
         │
-        ▼
-Incremental Processing
-(last processed ticker checkpoint)
+        ├── Pagination Handling (next_url)
+        │
+        ├── Incremental Processing
+        │      └── Continue after last processed ticker
         │
         ▼
 Snowflake Data Warehouse
 (STOCK_DB.STOCK_SCHEMA.STOCK_TICKERS)
         │
         ▼
-Scheduler
-(scheduler.py)
-Features
-Stock Data Extraction
+Analytics / Reporting
+```
 
-Fetch stock ticker reference data from the Massive.com API.
+A lightweight scheduler triggers the ingestion pipeline automatically.
 
-Incremental Data Loading
+```
+Scheduler (scheduler.py)
+        │
+        ▼
+Daily Pipeline Execution
+```
 
-Each run continues from the last processed ticker, preventing duplicate processing.
+### Features
 
-Pagination Handling
+- **Stock Data Extraction** – Retrieve stock ticker reference data from the Massive.com API  
+- **Incremental Ingestion** – Each run continues from the last processed ticker  
+- **Pagination Handling** – Automatically processes multiple API pages using `next_url`  
+- **Snowflake Integration** – Loads structured data directly into a Snowflake warehouse  
+- **Scheduled Execution** – Automate data collection with the built-in scheduler  
+- **Structured Logging** – Clear pipeline logs for monitoring and debugging  
 
-Automatically retrieves multiple API pages using next_url.
+### Project Structure
 
-Snowflake Data Warehouse Integration
-
-Loads structured ticker data directly into a Snowflake table.
-
-Automated Scheduling
-
-Includes a lightweight Python scheduler for automated runs.
-
-Structured Logging
-
-Uses Python logging to provide clear visibility into pipeline execution.
-
-Project Structure
+```
 stock-trading-python-app/
-│
-├── script.py
-│   Main ingestion pipeline:
-│   - Calls Massive API
-│   - Handles pagination
-│   - Performs incremental ingestion
-│   - Loads data into Snowflake
-│
-├── scheduler.py
-│   Runs the pipeline automatically on a schedule.
-│
-├── requirements.txt
-│   Python dependencies required to run the project.
-│
-├── .env
-│   Environment variables for API keys and Snowflake credentials.
-│
+├── script.py          # Main ingestion pipeline (API → Snowflake)
+├── scheduler.py       # Scheduled task runner for automated data collection
+├── requirements.txt   # Python dependencies
+├── .env               # Environment variables (API + Snowflake credentials)
 └── README.md
-Prerequisites
+```
 
-Before running the project you will need:
+### Prerequisites
 
-Python 3.9+
+- Python 3.x
+- A Massive.com API key ([Sign up here](https://massive.com/))
+- A Snowflake account
+- A Snowflake warehouse
 
-A Massive.com API key
+### Installation
 
-A Snowflake account
+1. **Clone the repository**
 
-A Snowflake warehouse
-
-Installation
-1. Clone the repository
+```bash
 git clone https://github.com/arronvz/stock-trading-python-app.git
 cd stock-trading-python-app
-2. Create a virtual environment
+```
+
+2. **Create and activate a virtual environment**
+
+```bash
 python -m venv pythonenv
 
-Activate it:
-
-Mac / Linux
-
-source pythonenv/bin/activate
-
-Windows
-
+# On Windows
 pythonenv\Scripts\activate
-3. Install dependencies
+
+# On macOS/Linux
+source pythonenv/bin/activate
+```
+
+3. **Install dependencies**
+
+```bash
 pip install -r requirements.txt
-Environment Configuration
+```
 
-Create a .env file in the project root.
+4. **Configure environment variables**
 
-Example:
+Create a `.env` file in the project root.
 
+Example configuration:
+
+```
 POLYGON_API_KEY=your_massive_api_key
 
 SNOWFLAKE_USER=your_user
@@ -131,93 +109,80 @@ SNOWFLAKE_DATABASE=STOCK_DB
 SNOWFLAKE_SCHEMA=STOCK_SCHEMA
 SNOWFLAKE_ROLE=PUBLIC
 SNOWFLAKE_TABLE=STOCK_TICKERS
-Snowflake Setup
+```
 
-Create the database and schema in Snowflake:
+### Usage
 
-CREATE DATABASE STOCK_DB;
+### Run the Data Pipeline
 
-CREATE SCHEMA STOCK_DB.STOCK_SCHEMA;
+Run the ingestion script to fetch stock ticker data and load it into Snowflake.
 
-The pipeline will automatically create the target table if it does not exist.
-
-Running the Pipeline
-Run the ingestion job manually
+```bash
 python script.py
+```
 
-This will:
+The pipeline will:
 
-Connect to the Massive API
+1. Request ticker reference data from the Massive API  
+2. Handle pagination using `next_url`  
+3. Determine the last processed ticker from Snowflake  
+4. Fetch only new records  
+5. Insert them into the Snowflake table  
 
-Fetch ticker reference data
+### Scheduled Data Collection
 
-Continue from the last stored ticker
+To run automated data collection on a schedule:
 
-Insert new records into Snowflake
-
-Scheduling the Pipeline
-
-You can run the scheduler to execute the pipeline automatically.
-
+```bash
 python scheduler.py
+```
 
-Example schedule:
+The scheduler can run the pipeline:
 
-Runs every minute (test job)
-Runs the stock pipeline once per day
+- every minute (for testing)
+- once per day (for production-style execution)
 
-For testing purposes you can also schedule the pipeline to run every minute.
+### Incremental Processing
 
-Incremental Ingestion
-
-To avoid reprocessing the same data each run, the pipeline implements incremental loading.
+To avoid reprocessing the same records each run, the pipeline performs **incremental ingestion**.
 
 Steps:
 
-Query Snowflake for the highest ticker already stored
+1. Query Snowflake for the last stored ticker
 
+```
 SELECT MAX(ticker)
 FROM STOCK_DB.STOCK_SCHEMA.STOCK_TICKERS
+```
 
-Use that value to filter the API request
+2. Use this value in the API request
 
+```
 ticker.gt=LAST_TICKER
+```
 
-Load only new records.
+3. Fetch only new records.
 
-This makes the pipeline idempotent and prevents duplicate data ingestion.
+This allows the pipeline to **continue exactly where the previous run stopped**.
 
-Logging
+### API Reference
 
-The pipeline uses structured logging for visibility.
+This project uses the [Massive.com API](https://massive.com/docs/) for stock market data.
 
-Example output:
+Key endpoint used:
 
-Starting stock ticker pipeline
-Requesting first page of ticker data
-Fetched 30 ticker records from API
-Inserting 30 rows into STOCK_DB.STOCK_SCHEMA.STOCK_TICKERS
-Pipeline completed successfully
-Future Improvements
+- **Ticker Reference Endpoint** – Provides metadata for all active stock tickers
 
-Possible enhancements to make this a production-grade pipeline:
+### License
 
-Use MERGE instead of INSERT to prevent duplicates
+This project is open source. See the repository for license details.
 
-Store pipeline checkpoints in a state table
+### Contributing
 
-Replace the scheduler with Airflow / Prefect / Dagster
+Contributions are welcome! Feel free to submit issues or pull requests.
 
-Add data validation tests
+### Acknowledgments
 
-Implement Bronze / Silver / Gold data layers
+- [Massive.com](https://massive.com/) for providing the stock market data API  
+- [Snowflake](https://www.snowflake.com/) for the cloud data warehouse platform  
 
-License
-
-This project is open source and available under the MIT License.
-
-Acknowledgments
-
-Massive.com API for stock market reference data
-
-Snowflake for the cloud data warehouse platform
